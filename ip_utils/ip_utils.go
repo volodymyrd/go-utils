@@ -5,9 +5,18 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 )
 
 func GetIPAddress(r *http.Request) string {
+	// Check for X-Forwarded-For header which contains the IP address from proxy
+	forwarded := r.Header.Get("X-Forwarded-For")
+	if forwarded != "" {
+		// X-Forwarded-For can contain a comma-separated list of IPs; the first one is client's IP
+		ips := strings.Split(forwarded, ",")
+		return strings.TrimSpace(ips[0])
+	}
+
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return ""
@@ -17,7 +26,7 @@ func GetIPAddress(r *http.Request) string {
 
 func GetLocation(ip string) string {
 	ipapiClient := http.Client{}
-	req, err := http.NewRequest("GET", "https://ipapi.co/json/", nil)
+	req, err := http.NewRequest("GET", "https://ipapi.co/"+ip+"/json/", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
